@@ -562,15 +562,41 @@
       // ============================================================
       // 触发下载
       // ============================================================
-      function triggerDownload(proxyUrl) {
-        // 直接在新标签页中打开代理下载链接，避免 iframe 兼容问题。
-        // 浏览器会把下载请求交给目标链接，若链接可直接下载文件则会弹出下载框。
-        var newWindow = window.open(proxyUrl, '_blank');
-        if (newWindow) {
-          newWindow.focus();
-        } else {
-          showToast('浏览器阻止了弹出窗口，请允许弹出窗口后重试。', 'error');
-        }
+      function triggerDownload(proxyUrl, originalUrl) {
+        // 使用 fetch + blob 方式下载文件，避免跨域导航问题
+        fetch(proxyUrl)
+          .then(function (response) {
+            if (!response.ok) {
+              throw new Error('HTTP ' + response.status);
+            }
+            return response.blob();
+          })
+          .then(function (blob) {
+            // 从 Content-Disposition 或原始 URL 提取文件名
+            var filename = 'download';
+            try {
+              var url = new URL(originalUrl);
+              var pathname = url.pathname;
+              if (pathname) {
+                filename = pathname.split('/').pop() || 'download';
+                // 移除查询参数
+                filename = filename.split('?')[0];
+              }
+            } catch (_) {}
+
+            // 创建临时下载链接
+            var blobUrl = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = filename || 'download';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(blobUrl);
+          })
+          .catch(function (err) {
+            showToast('下载失败：' + (err.message || '未知错误'), 'error');
+          });
       }
 
       // ============================================================
@@ -618,15 +644,15 @@
             }
 
             // 可达，触发下载
-            triggerDownload(proxyUrl);
+            triggerDownload(proxyUrl, rawUrl);
             showToast('开始下载，请查看浏览器下载列表，下载可能会延迟开始，请耐心等待。', 'success');
           })
           .catch(function (err) {
             // 网络错误或 CORS 错误（HEAD 可能被 CORS 阻挡时会抛 TypeError）
-            // 对于 CORS 错误，仍然尝试触发下载（浏览器导航不受 CORS 限制）
+            // 对于 CORS 错误，仍然尝试触发下载（fetch 请求自动跟随 CORS）
             if (err instanceof TypeError && err.message.indexOf('Failed to fetch') !== -1) {
               // 可能是 CORS 阻止了 HEAD 探测，直接尝试触发下载
-              triggerDownload(proxyUrl);
+              triggerDownload(proxyUrl, rawUrl);
               showToast('开始下载，请查看浏览器下载列表', 'success');
             } else {
               showToast(err.message || '网络连接失败，请稍后重试', 'error');

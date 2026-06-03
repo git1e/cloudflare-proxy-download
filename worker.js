@@ -65,7 +65,7 @@ function addCorsHeaders(response, origin) {
   corsHeaders.set('Access-Control-Allow-Origin', origin || '*');
   corsHeaders.set('Access-Control-Allow-Methods', 'GET, HEAD, POST, OPTIONS');
   corsHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Range');
-  corsHeaders.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Type');
+  corsHeaders.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Type, Content-Disposition');
   corsHeaders.set('Access-Control-Max-Age', '86400');
 
   return new Response(response.body, {
