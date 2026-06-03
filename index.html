@@ -554,15 +554,18 @@
       // 触发下载
       // ============================================================
       function triggerDownload(proxyUrl) {
-        // 方案：使用隐藏的 <a> 标签触发下载，浏览器直接处理流式下载
-        // 这样可以利用 Worker 的流式传输特性，不会阻塞 UI
-        var a = document.createElement('a');
-        a.href = proxyUrl;
-        a.download = ''; // 触发下载行为
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        // 使用隐藏的 iframe 触发下载，避免某些浏览器将代理页面保存为 HTML 文件
+        var iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = proxyUrl;
+        document.body.appendChild(iframe);
+
+        // 10 秒后移除 iframe，避免页面中遗留 DOM
+        setTimeout(function () {
+          if (iframe.parentNode) {
+            iframe.parentNode.removeChild(iframe);
+          }
+        }, 10000);
       }
 
       // ============================================================
@@ -598,14 +601,17 @@
               // 服务端返回错误
               return res.json().then(function (data) {
                 throw new Error(data.message || '服务器返回 HTTP ' + res.status);
-              }).catch(function (parseErr) {
+              }).catch(function () {
                 // 无法解析 JSON 时使用状态码信息
-                if (parseErr instanceof Error && parseErr.message !== data.message) {
-                  throw new Error('服务器返回 HTTP ' + res.status);
-                }
-                throw parseErr;
+                throw new Error('服务器返回 HTTP ' + res.status);
               });
             }
+
+            var contentType = res.headers.get('content-type') || '';
+            if (contentType.indexOf('text/html') !== -1) {
+              throw new Error('目标链接返回 HTML 页面，无法直接下载文件');
+            }
+
             // 可达，触发下载
             triggerDownload(proxyUrl);
             showToast('开始下载，请查看浏览器下载列表', 'success');
