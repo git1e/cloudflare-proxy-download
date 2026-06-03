@@ -31,22 +31,21 @@ function buildProxyHeaders(originalHeaders, targetUrl) {
 
   // 复制部分原始请求头
   const headersToCopy = [
-    'accept',
     'accept-encoding',
     'accept-language',
     'cache-control',
     'if-modified-since',
     'if-none-match',
-    'range',           // 支持断点续传
-    'sec-fetch-dest',
-    'sec-fetch-mode',
-    'sec-fetch-site',
+    'range', // 支持断点续传
   ];
 
   for (const name of headersToCopy) {
     const value = originalHeaders.get(name);
     if (value) proxyHeaders.set(name, value);
   }
+
+  // 统一设置 Accept，避免浏览器导航请求被目标服务器识别为 HTML 页面请求
+  proxyHeaders.set('Accept', '*/*');
 
   // 伪装为目标域名的请求头
   proxyHeaders.set('Host', targetUrl.hostname);
