@@ -58,8 +58,9 @@ function buildProxyHeaders(originalHeaders, targetUrl) {
 
 /**
  * 为响应添加 CORS 头部，允许前端页面跨域调用
+ * 同时确保 Content-Disposition 头存在，以便浏览器能够触发下载
  */
-function addCorsHeaders(response, origin) {
+function addCorsHeaders(response, origin, targetUrl) {
   const corsHeaders = new Headers(response.headers);
 
   corsHeaders.set('Access-Control-Allow-Origin', origin || '*');
@@ -67,6 +68,25 @@ function addCorsHeaders(response, origin) {
   corsHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Range');
   corsHeaders.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Type, Content-Disposition');
   corsHeaders.set('Access-Control-Max-Age', '86400');
+
+  // 如果响应中没有 Content-Disposition 头，从 URL 中提取文件名并添加
+  if (!corsHeaders.has('Content-Disposition') && targetUrl) {
+    try {
+      const url = new URL(targetUrl);
+      const pathname = url.pathname;
+      let filename = pathname.split('/').pop() || 'download';
+      // 移除查询参数
+      filename = filename.split('?')[0];
+      if (filename) {
+        corsHeaders.set('Content-Disposition', `attachment; filename="${encodeURI(filename)}"`);
+      }
+    } catch (_) {
+      // 如果无法解析 URL，使用默认文件名
+      if (!corsHeaders.has('Content-Disposition')) {
+        corsHeaders.set('Content-Disposition', 'attachment; filename="download"');
+      }
+    }
+  }
 
   return new Response(response.body, {
     status: response.status,
@@ -158,7 +178,7 @@ export default {
 
       // ---------- 添加 CORS 头并返回 ----------
       const origin = request.headers.get('Origin') || '*';
-      return addCorsHeaders(upstreamResponse, origin);
+      return addCorsHeaders(upstreamResponse, origin, targetUrl.toString());
 
     } catch (err) {
       // ---------- 全局异常捕获 ----------
