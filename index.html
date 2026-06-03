@@ -562,18 +562,15 @@
       // ============================================================
       // 触发下载
       // ============================================================
-      var downloadIframe;
-
       function triggerDownload(proxyUrl) {
-        // 使用单个隐藏 iframe 触发下载，避免某些浏览器将代理页面保存为 HTML 文件
-        // 大文件或慢网络情况下，iframe 可能需要更长时间才能开始下载，
-        // 因此保持 iframe 常驻页面，避免提前移除导致请求被取消。
-        if (!downloadIframe) {
-          downloadIframe = document.createElement('iframe');
-          downloadIframe.style.display = 'none';
-          document.body.appendChild(downloadIframe);
+        // 直接在新标签页中打开代理下载链接，避免 iframe 兼容问题。
+        // 浏览器会把下载请求交给目标链接，若链接可直接下载文件则会弹出下载框。
+        var newWindow = window.open(proxyUrl, '_blank');
+        if (newWindow) {
+          newWindow.focus();
+        } else {
+          showToast('浏览器阻止了弹出窗口，请允许弹出窗口后重试。', 'error');
         }
-        downloadIframe.src = proxyUrl;
       }
 
       // ============================================================
