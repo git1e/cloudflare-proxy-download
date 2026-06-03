@@ -562,19 +562,18 @@
       // ============================================================
       // 触发下载
       // ============================================================
-      function triggerDownload(proxyUrl) {
-        // 使用隐藏的 iframe 触发下载，避免某些浏览器将代理页面保存为 HTML 文件
-        var iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = proxyUrl;
-        document.body.appendChild(iframe);
+      var downloadIframe;
 
-        // 10 秒后移除 iframe，避免页面中遗留 DOM
-        setTimeout(function () {
-          if (iframe.parentNode) {
-            iframe.parentNode.removeChild(iframe);
-          }
-        }, 10000);
+      function triggerDownload(proxyUrl) {
+        // 使用单个隐藏 iframe 触发下载，避免某些浏览器将代理页面保存为 HTML 文件
+        // 大文件或慢网络情况下，iframe 可能需要更长时间才能开始下载，
+        // 因此保持 iframe 常驻页面，避免提前移除导致请求被取消。
+        if (!downloadIframe) {
+          downloadIframe = document.createElement('iframe');
+          downloadIframe.style.display = 'none';
+          document.body.appendChild(downloadIframe);
+        }
+        downloadIframe.src = proxyUrl;
       }
 
       // ============================================================
@@ -623,7 +622,7 @@
 
             // 可达，触发下载
             triggerDownload(proxyUrl);
-            showToast('开始下载，请查看浏览器下载列表', 'success');
+            showToast('开始下载，请查看浏览器下载列表，下载可能会延迟开始，请耐心等待。', 'success');
           })
           .catch(function (err) {
             // 网络错误或 CORS 错误（HEAD 可能被 CORS 阻挡时会抛 TypeError）
