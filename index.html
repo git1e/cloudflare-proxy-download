@@ -543,6 +543,15 @@
         }
       }
 
+      function hasFileExtension(url) {
+        try {
+          var u = new URL(url);
+          return /\/[^\/]+\.[a-z0-9]+($|[?#])/i.test(u.pathname);
+        } catch (_) {
+          return false;
+        }
+      }
+
       // ============================================================
       // 将完整目标 URL 作为 ?url= 参数传给 Worker
       // ============================================================
@@ -608,7 +617,7 @@
             }
 
             var contentType = res.headers.get('content-type') || '';
-            if (contentType.indexOf('text/html') !== -1) {
+            if (contentType.indexOf('text/html') !== -1 && !hasFileExtension(rawUrl)) {
               throw new Error('目标链接返回 HTML 页面，无法直接下载文件');
             }
 
